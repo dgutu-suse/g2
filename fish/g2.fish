@@ -131,6 +131,7 @@ end
 #### GIT Utility functions  ------------------------------------------------------------------
 
 function __g2_getremote
+
     set -l remote (command git rev-parse --symbolic-full-name --abbrev-ref '@{u}' ^/dev/null)
     if test "$remote" = '@{u}'
         echo ''
@@ -193,7 +194,6 @@ end
 # Returns true(1) if the given branch was force updated
 #   if no parameters are provided, figures the upstream branch from the tracking table
 function __g2_isforced --argument-names remote
-
     test ! "$remote";and set remote (__g2_getremote)
     if test "$remote"
         command git rev-list $remote | grep -quiet (command git rev-parse $remote ) ^/dev/null; and return 1
@@ -211,7 +211,6 @@ function __g2_isdirty
     if command git diff-files --quiet
         command git diff-index --quiet --cached HEAD; and return 0
     end
-
     __g2_fatal 'Changes detected, please commit them or get them out of the way <g wip>. You may also discard them with a <g panic>.'
     return 1
 
@@ -220,9 +219,6 @@ end
 # return true(1) if top commit is wip - work in progress
 # the proper validation is __g2_iswip; or return 1
 function __g2_iswip --argument-names remote
-
-    #command git rev-parse; or return 0
-
     test ! "$remote";and set remote (__g2_getremote)
 
     set -l wip 0
@@ -308,7 +304,6 @@ function __g2_st
 end
 
 function __g2_freeze --argument-names flag msg
-    command git rev-parse; or return 1
 
     if test "$flag" = '-m'
         if test "$msg"
@@ -336,7 +331,6 @@ function __g2_freeze --argument-names flag msg
 end
 
 function __g2_unfreeze
-    command command git rev-parse; or return 1
     if test -z "$argv"
         if test (command git reset -q HEAD > /dev/null) -eq 1
             __g2_fatal 'The first repo commit must be unfrozen file by file. Sorry about that...'
@@ -361,8 +355,6 @@ function __g2_ci
 end
 
 function __g2_am
-    command git rev-parse; or return 1
-
     if command git diff --cached --no-ext-diff --quiet --exit-code
          __g2_fatal 'No changes to amend, please use <g freeze> to stage your modification, then try amending again.'
        return 1
@@ -380,13 +372,11 @@ function __g2_am
 end
 
 function __g2_cp
-    command git rev-parse; or return 1
      __g2_iswip; or return 1
     command git cherry-pick $argv
 end
 
 function __g2_ig
-    command git rev-parse; or return 1
 
     if test -z "$argv"
         __g2_info 'Usage: ignore [file]'
@@ -407,13 +397,10 @@ function __g2_server
 end
 
 function __g2_abort
-    command git rev-parse; or return 1
     command git merge --abort ^ /dev/null; or command git rebase --abort ^ /dev/null
 end
 
 function __g2_continue
-
-    command git rev-parse; or return 1
 
     switch (__g2_wrkspcState)
 
@@ -441,7 +428,6 @@ function __g2_continue
 end
 
 function __g2_panic
-    command git rev-parse; or return 1
 
     __g2_askYN 'This action may discard all uncommited changes, are you sure'
     if test $status -eq 1
@@ -456,16 +442,15 @@ function __g2_panic
 end
 
 function __g2_gc
-    command git rev-parse; or return 1
 
     command git fetch --all -p
     and command git fsck
     and command git reflog expire --expire=now --all
+    and command git gc --prune=now
     and command git gc --aggressive --prune=now
 end
 
 function __g2_br
-   command git rev-parse; or return 1
 
     if test (count $argv) -eq 0
         command git branch -a
@@ -507,7 +492,6 @@ function __g2_key --argument-names opt
 end
 
 function __g2_wip
-    command git rev-parse; or return 1
 
     __g2_iswip
     if test $status -eq 1
@@ -519,7 +503,6 @@ function __g2_wip
 end
 
 function __g2_unwip
-    command git rev-parse; or return 1
 
     __g2_iswip
     if test $status -eq 0
@@ -533,7 +516,6 @@ end
 
 function __g2_track --argument-names branch
 
-    command git rev-parse; or return 1
     if test "$branch"
 
         test (echo $branch | grep -e '^[()a-zA-Z0-9\._\-]*/[()a-zA-Z0-9\._\-]*$' | wc -l) -ne 1
@@ -569,8 +551,6 @@ end
 
 function __g2_rs --argument-names arg1
 
-    command git rev-parse; or return 1
-
     if test "$arg1" = 'upstream'
         if not __g2_askYN 'Warning: resetting to the upstream may erase local changes, are you sure'
             __g2_abort
@@ -589,8 +569,6 @@ end
 
 function __g2_rb
 
-    command git rev-parse; or return 1
-
     if test (__g2_wrkspcState) = 'false'
         if __g2_askYN 'The branch history is about to be rewritten. It is an advanced operation, please confirm'
             return 1
@@ -601,8 +579,6 @@ function __g2_rb
 end
 
 function __g2_mg
-
-    command git rev-parse; or return 1
 
     if test (__g2_isbehind) -eq 1
         __g2_askYN 'It appears the server branch has new updates, you should probably <sync> this branch first. proceed with the merge'; and return 1
@@ -622,7 +598,6 @@ function __g2_mg
 end
 
 function __g2_co --argument-names branch
-    command git rev-parse; or return 1
 
     # check if it's a hash
     if test -z (echo "$branch" | grep -e '^[()a-zA-Z0-9\._\-]*$')
@@ -646,7 +621,6 @@ end
 
 function __g2_add
 
-    command git rev-parse; or return 1
     __g2_iswip; or return 1
 
     set -l level (command git config --global --get g2.userlevel)
@@ -660,7 +634,6 @@ end
 
 function __g2_undo --argument-names action
 
-    command git rev-parse; or return 1
     if test (count $argv) -lt 1
         __g2_fatal 'Usage : g undo <file|commit|merge> <?path>'
         return 1
@@ -688,7 +661,6 @@ end
 
 function __g2_push
 
-    command git rev-parse; or return 1
     __g2_iswip; or return 1
 
     # figure if the force flag is being used
@@ -749,7 +721,6 @@ end
 # g2 pull uses the --no-ff flag
 function __g2_pull
 
-    command git rev-parse; or return 1
     __g2_iswip; or return 1
 
     set -l idx (count $argv)
@@ -790,7 +761,6 @@ end
 # Performs a fetch, rebase, push with a bunch of validations
 function __g2_sync --argument-names flag
 
-    command git rev-parse; or return 1
     __g2_iswip; or return 1
     __g2_isdirty; or return 1
 
@@ -1055,108 +1025,119 @@ function g
                 # eval $CMDS[(math $i+1)] '$argv'
 
                 switch $i
-                    case abort
-                        __g2_abort
-                    case add
-                        __g2_add
-                    case am
-                        __g2_am $argv
-                    case br branch
-                        __g2_br $argv
-                    case bs bisect
-                        command git bisect $argv
+                    case version
+                        __g2_version
                     case clone
                         command git clone $argv
-                    case ci commit
-                        __g2_ci $argv
-                    case co checkout
-                        __g2_co $argv
-                    case continue
-                        __g2_continue
-                    case cp cherry-pick
-                        __g2_cp $argv
-                    case df diff
-                        command git diff $argv
-                    case dt difftool
-                        command git difftool $argv
-                    case fetch
-                        command git fetch $argv
-                    case freeze
-                        __g2_freeze $argv
-                    case gc
-                        __g2_gc
-                    case gp grep
-                        command git grep $argv
-                    case gui
-                        command git gui $argv
-                    case help
-                        command git help $argv
-                    case ig
-                        __g2_ig $argv
                     case init
                         command git init $argv
                     case key
                         __g2_key $argv
-                    case lg log
-                        __g2_lg $argv
-                    case ls ls-files
-                        command git ls-files $argv
-                    case mg merge
-                        __g2_mg $argv
-                    case mt mergetool
-                        command git mergetool $argv
-                    case mv
-                        command git mv $argv
-                    case panic
-                        __g2_panic
-                    case pull
-                        __g2_pull $argv
-                    case push
-                        __g2_push $argv
-                    case rb rebase
-                        __g2_rb $argv
-                    case refresh
-                        __g2_refresh
-                    case rt remote
-                        command git remote $argv
-                    case rm
-                        command git rm $argv
-                    case rs reset
-                        __g2_rs $argv
-                    case rv revert
-                        __g2_rv $argv
                     case setup
                         __g2_setup
-                    case server
-                        __g2_server
-                    case sh show
-                        command git show $argv
-                    case sm submodule
-                        command git submodule $argv
-                    case ss stash
-                        command git stash $argv
-                    case st status
-                        __g2_st $argv
-                    case sync
-                        __g2_sync $argv
-                    case tg tag
-                        command git tag $argv
-                    case track
-                        __g2_track $argv
-                    case undo
-                        __g2_undo $argv
-                    case unfreeze
-                        __g2_unfreeze $argv
-                    case unwip
-                        __g2_unwip
-                    case version
-                        __g2_version
-                    case wip
-                        __g2_wip
                     case '*'
-                        __g2_fatal "Action $i not implemented"
-                        return 1
+                        git_is_repo
+                        if [ $status = 1 ]
+                            printf "Not a git repository"
+                            return 1
+                        end
+
+
+                        switch $i
+                            case abort
+                                __g2_abort
+                            case add
+                                __g2_add
+                            case am
+                                __g2_am $argv
+                            case br branch
+                                __g2_br $argv
+                            case bs bisect
+                                command git bisect $argv
+                            case ci commit
+                                __g2_ci $argv
+                            case co checkout
+                                __g2_co $argv
+                            case continue
+                                __g2_continue
+                            case cp cherry-pick
+                                __g2_cp $argv
+                            case df diff
+                                command git diff $argv
+                            case dt difftool
+                                command git difftool $argv
+                            case fetch
+                                command git fetch $argv
+                            case freeze
+                                __g2_freeze $argv
+                            case gc
+                                __g2_gc
+                            case gp grep
+                                command git grep $argv
+                            case gui
+                                command git gui $argv
+                            case help
+                                command git help $argv
+                            case ig
+                                __g2_ig $argv
+                            case lg log
+                                __g2_lg $argv
+                            case ls ls-files
+                                command git ls-files $argv
+                            case mg merge
+                                __g2_mg $argv
+                            case mt mergetool
+                                command git mergetool $argv
+                            case mv
+                                command git mv $argv
+                            case panic
+                                __g2_panic
+                            case pull
+                                __g2_pull $argv
+                            case push
+                                __g2_push $argv
+                            case rb rebase
+                                __g2_rb $argv
+                            case refresh
+                                __g2_refresh
+                            case rt remote
+                                command git remote $argv
+                            case rm
+                                command git rm $argv
+                            case rs reset
+                                __g2_rs $argv
+                            case rv revert
+                                __g2_rv $argv
+                            case server
+                                __g2_server
+                            case sh show
+                                command git show $argv
+                            case sm submodule
+                                command git submodule $argv
+                            case ss stash
+                                command git stash $argv
+                            case st status
+                                __g2_st $argv
+                            case sync
+                                __g2_sync $argv
+                            case tg tag
+                                command git tag $argv
+                            case track
+                                __g2_track $argv
+                            case undo
+                                __g2_undo $argv
+                            case unfreeze
+                                __g2_unfreeze $argv
+                            case unwip
+                                __g2_unwip
+                            case wip
+                                __g2_wip
+                            case '*'
+                                __g2_fatal "Action $i not implemented"
+                                return 1
+                        end
                 end
+
                 return $status
             end
         end
