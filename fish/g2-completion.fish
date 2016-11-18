@@ -2,7 +2,7 @@
 # Use 'command git' to avoid interactions for aliases from git to (e.g.) hub
 
 function __g2_prompt_branches
-  command git branch --no-color -a ^/dev/null | sgrep -v ' -> ' | sed -e 's/^..//' -e 's/^remotes\///'
+  command git branch --no-color -a ^/dev/null | grep -v 'remotes/' | sed -e 's/^..//' -e 's/^remotes\///'
 end
 
 function __g2_prompt_remotebranches
