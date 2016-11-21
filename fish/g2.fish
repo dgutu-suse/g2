@@ -21,6 +21,7 @@ end
 
 #### IO functions ------------------------------------------------------------------
 
+#TODO use fisher get
 function __g2_askInput --argument-names prompt default trimResult
 
     function __g2_askprompt --no-scope-shadowing
@@ -36,7 +37,7 @@ function __g2_askInput --argument-names prompt default trimResult
     end
 
     set -l REPLY
-    while test ! (echo "$REPLY" | tr -d ' ')
+    while test ! (echo "$REPLY" | string trim -l -r -c ' ')
         read -p __g2_askprompt REPLY
         if test -z "$REPLY" -a -n "$default"
             set REPLY $default
@@ -44,13 +45,15 @@ function __g2_askInput --argument-names prompt default trimResult
     end
 
     if test "$trimResult" = "true"
-        echo "$REPLY" | tr -d ' '
+        echo "$REPLY" | string trim -l -r -c ' '
     else
         echo $REPLY
     end
 
 end
 
+
+# todo replace with fisher choice
 function __g2_askChoice --argument-names prompt choices default trimResult
 
     set -l list (echo $choices | tr ' ' \n)
@@ -89,7 +92,7 @@ function __g2_askChoice --argument-names prompt choices default trimResult
     end
 
     set -l REPLY
-    while test -z (echo "$REPLY" | tr -d ' ')
+    while test -z (echo "$REPLY" | string trim -l -r -c ' ')
         read -p __g2_askprompt REPLY
         if test -z "$REPLY" -a -n "$default"
             set REPLY $default
@@ -97,13 +100,14 @@ function __g2_askChoice --argument-names prompt choices default trimResult
     end
 
     if test "$trimResult" = "true"
-        echo "$REPLY" | tr -d ' '
+        echo "$REPLY" | string trim -l -r -c ' '
     else
         echo "$REPLY"
     end
 
 end
 
+#TODO replace with choices --prompt="Do you agree? " "Yes" "No" --default="1"
 
 # 1 - means YES 0-No
 function __g2_askYN --argument-names prompt
@@ -145,12 +149,10 @@ end
 function __g2_wrkspcState
 
     set -l git_dir (command git rev-parse --git-dir ^/dev/null)
-
     if test -d "$git_dir/rebase-merge" -o -d "$git_dir/rebase-apply"
         echo 'rebase'
         return 0
     end
-
     if test -d "$git_dir/MERGE_HEAD"
         echo 'merge'
         return 0
@@ -164,9 +166,7 @@ end
 function __g2_isbehind  --argument-names remote
 
     set -l branch (command git rev-parse --symbolic-full-name --abbrev-ref HEAD)
-    if test -z "$remote"
-        set remote (__g2_getremote)
-    end
+    set -l remote (__g2_getremote)
     if test "$remote"
         command git fetch
         set -l CNT (command git rev-list --right-only --count $branch...$remote -- )
@@ -181,7 +181,7 @@ end
 function __g2_isforward  --argument-names remote
 
     set -l branch (command git rev-parse --symbolic-full-name --abbrev-ref HEAD)
-    test ! "$remote";and set remote (__g2_getremote)
+    set -l remote (__g2_getremote)
     if test "$remote"
         set -l CNT (command git rev-list --left-only --count $branch...$remote -- )
         if test $CNT -gt 0
@@ -194,9 +194,9 @@ end
 # Returns true(1) if the given branch was force updated
 #   if no parameters are provided, figures the upstream branch from the tracking table
 function __g2_isforced --argument-names remote
-    test ! "$remote";and set remote (__g2_getremote)
+    set -l remote (__g2_getremote)
     if test "$remote"
-        command git rev-list $remote | grep -quiet (command git rev-parse $remote ) ^/dev/null; and return 1
+        command git rev-list $remote | string match -q --invert (command git rev-parse $remote ); or return 1
     end
     return 0
 end
@@ -208,6 +208,7 @@ function __g2_isdirty
 #        command git diff --cached --no-ext-diff --quiet --exit-code; and return 0
 #    end
 
+#TODO bizarre il faut un test ici non?
     if command git diff-files --quiet
         command git diff-index --quiet --cached HEAD; and return 0
     end
@@ -219,21 +220,20 @@ end
 # return true(1) if top commit is wip - work in progress
 # the proper validation is __g2_iswip; or return 1
 function __g2_iswip --argument-names remote
-    test ! "$remote";and set remote (__g2_getremote)
-
-    set -l wip 0
+    set -l remote (__g2_getremote)
     if test -z "$remote"
-        set wip (command git log --online -1 ^/dev/null | cut -f 2 -d ' ' | grep -c wip)
+        set -l wip (command git log --online -1 ^/dev/null | string match "*wip")
     else
-        set wip (command git log $remote..HEAD --oneline ^/dev/null | cut -f 2 -d ' ' | uniq | grep -c wip)
+        set -l wip (command git log $remote..HEAD --oneline ^/dev/null | string match "*wip")
     end
 
-    if test $wip -gt 0
-        __g2_fatal 'Work In Progress (wip) detected, please run <g unwip> to resume work items first.'
-        return 1;
+    if test -z "$wip"
+        return 0
     end
+    
+    __g2_fatal 'Work In Progress (wip) detected, please run <g unwip> to resume work items first.'
+    return 1;
 
-    return 0;
 end
 
 
@@ -458,10 +458,10 @@ function __g2_br
 
         command git for-each-ref --format='%(refname:short) %(upstream:short)' refs/heads |  \
         while read local remote
-            test ! "$remote"; and continue
-
-            set -l count (command git rev-list --left-right --count $local...$remote -- ^/dev/null |tr \t \n); or continue
-            __g2_info "$local (to sync:$count[1]) | (to merge:$count[2]) $remote"
+            if test "$remote"
+                set -l count (command git rev-list --left-right --count $local...$remote -- ^/dev/null |tr \t \n); or continue
+                __g2_info "$local (to sync:$count[1]) | (to merge:$count[2]) $remote"
+            end
         end
     else
         command git branch $argv
@@ -508,7 +508,7 @@ function __g2_unwip
     if test $status -eq 0
         __g2_fatal "There is nothing to unwip..."
     else
-        if test -z (command git log -n 1 | grep -q -c "wip")
+        if test -z (command git log -n 1 | string match -q "*wip")
             command git reset HEAD~1
         end
     end
@@ -526,7 +526,6 @@ function __g2_track --argument-names branch
 
         command git ls-remote --exit-code . "$branch"  >/dev/null ^&1
         if test $status -ne 0
-
             if not __g2_askYN "Remote branch not found, would you like to refresh from the server"
                 command git fetch
                 __g2_info "Good, now try the command again";
@@ -624,6 +623,7 @@ function __g2_add
     __g2_iswip; or return 1
 
     set -l level (command git config --global --get g2.userlevel)
+    #TODO virer ca
     if test "$level" = 'advanced'
         command git add $argv
     else
@@ -672,10 +672,10 @@ function __g2_push
                 set forceFlag 1
                 set -e argv[$idx]
         end
-        set idx (math $idx + 1)
+        set -l idx (math $idx + 1)
     end
 
-    set idx (count $argv)
+    set -l idx (count $argv)
 
     if test $idx -lt 2 -a $forceFlag -eq 0
         __g2_info 'Remember, you may only use <push> or <pull> against a feature branch, and <sync> against the working branch.'
@@ -686,7 +686,7 @@ function __g2_push
     # read the branch
     set -l branch $argv[$idx]
     set -e argv[$idx]
-    set idx (math $idx - 1)
+    set -l idx (math $idx - 1)
 
     # read remote
     set -l rmt $argv[$idx]
@@ -938,6 +938,7 @@ function __g2_setup
 
 end
 
+#TODO use fisher getops
 function g
     if test (count $argv) -eq 0
         __g2_usage;
