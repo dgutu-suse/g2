@@ -797,7 +797,7 @@ function __g2_sync --argument-names flag
 
     echo "pullOnly:$pullOnly  rchg:$rchg  lchg:$lchg"
     if test $rchg -gt 0
-        echo rebasing...
+        echo Rebasing...
         if not command git rebase $remote
             set unmerged (command git ls-files --unmerged)
             if test "$unmerged"
@@ -809,7 +809,7 @@ function __g2_sync --argument-names flag
         end
     end
 
-    echo "pullOnly:$pullOnly  rchg:$rchg  lchg:$lchg"
+    debug --footer="(%name)" "pullOnly:%pullOnly  rchg:%rchg  lchg:%lchg" $pullOnly $rchg $lchg
     if test $pullOnly -eq 0 -a $lchg -gt 0
         echo pushing...
         command git push
