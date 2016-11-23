@@ -164,13 +164,11 @@ end
 
 # Returns true(1) if the branch is behind its matching upstream branch
 function __g2_isbehind  --argument-names remote
-
-    set -l branch (command git rev-parse --symbolic-full-name --abbrev-ref HEAD)
     set -l remote (__g2_getremote)
     if test "$remote"
+      	set -l branch (command git rev-parse --symbolic-full-name --abbrev-ref HEAD)
         command git fetch
-        set -l CNT (command git rev-list --right-only --count $branch...$remote -- )
-        if test $CNT -gt 0
+        if test (command git rev-list --right-only --count $branch...$remote -- ) -gt 0
             return 1;
         end
     end
@@ -180,11 +178,10 @@ end
 # Returns true(1) if the branch is forward its matching upstream branch
 function __g2_isforward  --argument-names remote
 
-    set -l branch (command git rev-parse --symbolic-full-name --abbrev-ref HEAD)
     set -l remote (__g2_getremote)
     if test "$remote"
-        set -l CNT (command git rev-list --left-only --count $branch...$remote -- )
-        if test $CNT -gt 0
+     	set -l branch (command git rev-parse --symbolic-full-name --abbrev-ref HEAD)
+        if test (command git rev-list --left-only --count $branch...$remote -- ) -gt 0
             return 1
         end
     end
@@ -221,12 +218,8 @@ end
 # the proper validation is __g2_iswip; or return 1
 function __g2_iswip
 
-    set -l wip (command git log --oneline -1 ^/dev/null | string match "*wip")
-    if test -z "$wip"
-        return 0
-    end    
- #   __g2_fatal 'Work In Progress (wip) detected, please run <g unwip> to resume work items first.'
-    return 1
+    test -z (command git log --oneline -1 ^/dev/null | string match "*-----WIP-----"); or __g2_fatal 'Work In Progress (wip) detected, please run <g unwip> to resume work items first.'
+    return $status
 end
 
 
@@ -297,7 +290,6 @@ function __g2_st
 end
 
 function __g2_freeze --argument-names flag msg
-
     if test "$flag" = '-m'
         if test "$msg"
             # remove two parameters from the left
@@ -490,13 +482,12 @@ function __g2_wip
         __g2_info "Amending previous wip commit..."
         __g2_freeze; and command git commit --amend -C HEAD
     else
-        __g2_freeze -m "wip"
+        __g2_freeze -m "-----WIP-----"
     end
 end
 
 function __g2_unwip
-
-    __g2_iswip
+    __g2_iswip >> /dev/null
     if test $status -eq 0
         __g2_fatal "There is nothing to unwip..."
     else
