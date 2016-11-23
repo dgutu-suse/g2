@@ -219,21 +219,14 @@ end
 
 # return true(1) if top commit is wip - work in progress
 # the proper validation is __g2_iswip; or return 1
-function __g2_iswip --argument-names remote
-    set -l remote (__g2_getremote)
-    if test -z "$remote"
-        set -l wip (command git log --online -1 ^/dev/null | string match "*wip")
-    else
-        set -l wip (command git log $remote..HEAD --oneline ^/dev/null | string match "*wip")
-    end
+function __g2_iswip
 
+    set -l wip (command git log --oneline -1 ^/dev/null | string match "*wip")
     if test -z "$wip"
         return 0
-    end
-    
-    __g2_fatal 'Work In Progress (wip) detected, please run <g unwip> to resume work items first.'
-    return 1;
-
+    end    
+ #   __g2_fatal 'Work In Progress (wip) detected, please run <g unwip> to resume work items first.'
+    return 1
 end
 
 
@@ -492,7 +485,6 @@ function __g2_key --argument-names opt
 end
 
 function __g2_wip
-
     __g2_iswip
     if test $status -eq 1
         __g2_info "Amending previous wip commit..."
@@ -508,9 +500,7 @@ function __g2_unwip
     if test $status -eq 0
         __g2_fatal "There is nothing to unwip..."
     else
-        if test -z (command git log -n 1 | string match -q "*wip")
-            command git reset HEAD~1
-        end
+        command git reset HEAD~1
     end
 end
 
@@ -619,17 +609,8 @@ function __g2_co --argument-names branch
 end
 
 function __g2_add
-
     __g2_iswip; or return 1
-
-    set -l level (command git config --global --get g2.userlevel)
-    #TODO virer ca
-    if test "$level" = 'advanced'
-        command git add $argv
-    else
-        __g2_fatal "Please don't use <add> with G2, <freeze> and <unfreeze> are powerful commands"
-    end
-
+    __g2_fatal "Please don't use <add> with G2, <freeze> and <unfreeze> are powerful commands"
 end
 
 function __g2_undo --argument-names action
@@ -700,13 +681,7 @@ function __g2_push
     else
         if test $forceFlag -eq 0 -a "$dst" = "$remote"
 
-            set -l level (command git config --global --get g2.userlevel)
-            if test "$level" = 'advanced'
-                __g2_askYN "Advanced: Are you sure you want to PUSH?"; or command git pull --no-ff $argv $rmt $branch
-            else
-                __g2_fatal 'Please use <sync> to synchronize the current branch and <push> to copy to another branch'
-                return 1
-            end
+            __g2_fatal 'Please use <sync> to synchronize the current branch and <push> to copy to another branch'
         end
     end
 
@@ -744,13 +719,7 @@ function __g2_pull
         __g2_askYN "Would you like to track $dst"; or __g2_track "$dst"
     else
         if test "$dst" = "$remote"
-            set -l level (command git config --global --get g2.userlevel)
-            if test "$level" = 'advanced'
-                 __g2_askYN "Advanced: Are you sure you want to PULL?"; or command git pull --no-ff $argv $rmt $branch
-            else
-                __g2_fatal 'Please use <sync> to synchronize the current branch and <pull> to merge a feature branch'
-                return 1
-            end
+            __g2_fatal 'Please use <sync> to synchronize the current branch and <pull> to merge a feature branch'
          end
     end
 
