@@ -13,49 +13,45 @@ end
 #### output functions ------------------------------------------------------------------
 
 function __g2_fatal
-    set_color red;
-    echo 'fatal: '$argv[1];
-    set_color normal;
+    cprintf "<bg:red>FATAL:</bg> %s" $argv[1]
 end
 
 function __g2_info
-    set_color --bold white;
-    echo $argv[1];
-    set_color normal;
+    cprintf "<bg:white>%s</bg>" $argv[1]
 end
 
 #### IO functions ------------------------------------------------------------------
 
-#TODO use fisher get
-function __g2_askInput --argument-names prompt default trimResult
+#TODO use fisher get -p prompt -d default -e error_msg
+# function __g2_askInput --argument-names prompt default trimResult
 
-    function __g2_askprompt --no-scope-shadowing
-        set_color --bold white;
-        echo -n $prompt
-        set_color normal
-        if test -z "$default"
-            set_color green
-            echo -n ' ('$default')'
-            set_color normal
-        end
-        echo -n ': '
-    end
+#     function __g2_askprompt --no-scope-shadowing
+#         set_color --bold white;
+#         echo -n $prompt
+#         set_color normal
+        if test "$default"
+#             set_color green
+#             echo -n ' ('$default')'
+#             set_color normal
+#         end
+#         echo -n ': '
+#     end
 
-    set -l REPLY
-    while not test (echo "$REPLY" | string trim -l -r -c ' ')
-        read -p __g2_askprompt REPLY
-        if test -z "$REPLY" -a -n "$default"
-            set REPLY $default
-        end
-    end
+#     set -l REPLY
+    while test ! (echo "$REPLY" | string trim -l -r -c ' ')
+#         read -p __g2_askprompt REPLY
+#         if test -z "$REPLY" -a -n "$default"
+#             set REPLY $default
+#         end
+#     end
 
-    if test "$trimResult" = "true"
-        echo "$REPLY" | string trim -l -r -c ' '
-    else
-        echo $REPLY
-    end
+#     if test "$trimResult" = "true"
+#         echo "$REPLY" | string trim -l -r -c ' '
+#     else
+#         echo $REPLY
+#     end
 
-end
+# end
 
 
 # todo replace with fisher choice
@@ -212,9 +208,9 @@ end
 # return true(1) if top commit is wip - work in progress
 # the proper validation is __g2_iswip; or return 1
 function __g2_iswip
-    if command git log --oneline -1 --pretty=format:'%s' ^/dev/null | string match -i WIPWIPWIPWIP
+    if command git log --oneline -1 --pretty=format:'%s' ^/dev/null | string match -q -i WIPWIPWIPWIP
         __g2_fatal 'Sorry, a WIP commit must remain local, please run <g unwip> to resume work items.'
-        return 1
+    	return 1
     end
     return 0
 end
@@ -352,7 +348,7 @@ function __g2_am
 end
 
 function __g2_cp
-     __g2_iswip; or return 1
+    __g2_iswip; or return 1
     command git cherry-pick $argv
 end
 
@@ -806,27 +802,28 @@ function __g2_setup
 
     ## USER NAME
     set -l default (command git config --global --get user.name)
-    set -l nameinput (__g2_askInput "Please input your full name" "$default" false)
+    set -l nameinput (get -p "Please input your full name" -d "$default" -r "^[a-zA-Z0-9]\+")
     command git config --global user.name "$nameinput"
 
     ## EMAIL
     __g2_info "-----------------------------------------------------"
     set -l default (command git config --global --get user.email)
-    set -l emailinput (__g2_askInput "Please input your email" "$default" true)
+    set -l emailinput (get -p "Please input your email" -d "$default" -r "^[a-zA-Z0-9]\+@[a-zA-Z0-9]\+\.[a-z]\{2,\}")
+  
     command git config --global user.email "$emailinput"
 
     ## EDITOR
     __g2_info "-----------------------------------------------------"
     set -l default (command git config --global --get core.editor)
     test ! "$default"; and set default vi
-    set -l editor (__g2_askInput "Preferred Editor" "$default" false)
+    set -l editor (get -p "Preferred Editor" -d "$default" -r "^[a-zA-Z0-9/\.]\+")
     command git config --global core.editor "$editor"
 
     ## EXCLUDE FILES
     __g2_info "-----------------------------------------------------"
     set -l default (command git config --global --get g2.panic.excludes)
     test ! "$default"; and set default "-e .classpath -e .settings -e *.iml"
-    set -l g2excludes (__g2_askInput 'Pattern of files to keep untouched' "$default" false)
+    set -l g2excludes (get -p 'Pattern of files to keep untouched' -d "$default")
     command git config --global g2.panic.excludes "$g2excludes"
 
     ## DIFFTOOL
@@ -847,6 +844,7 @@ function __g2_setup
     __g2_info "-----------------------------------------------------"
     set -l default (command git config mergetool.$choice.trustExitCode)
     test ! $default; and set default false
+    # TODO replace with choice
     set -l existCode (__g2_askInput "Trust mergetool exit code?" "$default" false)
     command git config --global mergetool.$choice.trustExitCode $existCode
 
