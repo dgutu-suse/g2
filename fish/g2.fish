@@ -4,6 +4,12 @@
 # Author - Olivier Refalo
 #
 
+# Ensure git is installed in the path
+if test -z (which git)
+    __g2_fatal "Sorry, git is a required G2 dependency and must be in the PATH";
+    exit 1;
+end
+
 #### output functions ------------------------------------------------------------------
 
 function __g2_fatal
@@ -18,7 +24,6 @@ function __g2_info
     set_color normal;
 end
 
-
 #### IO functions ------------------------------------------------------------------
 
 #TODO use fisher get
@@ -28,7 +33,7 @@ function __g2_askInput --argument-names prompt default trimResult
         set_color --bold white;
         echo -n $prompt
         set_color normal
-        if test "$default"
+        if test -z "$default"
             set_color green
             echo -n ' ('$default')'
             set_color normal
@@ -37,7 +42,7 @@ function __g2_askInput --argument-names prompt default trimResult
     end
 
     set -l REPLY
-    while test ! (echo "$REPLY" | string trim -l -r -c ' ')
+    while not test (echo "$REPLY" | string trim -l -r -c ' ')
         read -p __g2_askprompt REPLY
         if test -z "$REPLY" -a -n "$default"
             set REPLY $default
@@ -166,9 +171,8 @@ end
 function __g2_isbehind  --argument-names remote
     set -l remote (__g2_getremote)
     if test "$remote"
-      	set -l branch (command git rev-parse --symbolic-full-name --abbrev-ref HEAD)
         command git fetch
-        if test (command git rev-list --right-only --count $branch...$remote -- ) -gt 0
+        if test (command git rev-list --right-only --count (git_branch_name)...$remote -- ) -gt 0
             return 1;
         end
     end
@@ -177,11 +181,9 @@ end
 
 # Returns true(1) if the branch is forward its matching upstream branch
 function __g2_isforward  --argument-names remote
-
     set -l remote (__g2_getremote)
     if test "$remote"
-     	set -l branch (command git rev-parse --symbolic-full-name --abbrev-ref HEAD)
-        if test (command git rev-list --left-only --count $branch...$remote -- ) -gt 0
+        if test (command git rev-list --left-only --count (git_branch_name)...$remote -- ) -gt 0
             return 1
         end
     end
@@ -192,7 +194,7 @@ end
 #   if no parameters are provided, figures the upstream branch from the tracking table
 function __g2_isforced --argument-names remote
     set -l remote (__g2_getremote)
-    if test "$remote"
+    if test -n "$remote"
         command git rev-list $remote | string match -q --invert (command git rev-parse $remote ); or return 1
     end
     return 0
@@ -200,77 +202,70 @@ end
 
 # Returns true(1) if the repo has pending changes
 function __g2_isdirty
-
-#    if command git diff --no-ext-diff --quiet --exit-code
-#        command git diff --cached --no-ext-diff --quiet --exit-code; and return 0
-#    end
-
-#TODO bizarre il faut un test ici non?
     if command git diff-files --quiet
         command git diff-index --quiet --cached HEAD; and return 0
     end
     __g2_fatal 'Changes detected, please commit them or get them out of the way <g wip>. You may also discard them with a <g panic>.'
     return 1
-
 end
 
 # return true(1) if top commit is wip - work in progress
 # the proper validation is __g2_iswip; or return 1
 function __g2_iswip
-
-    test -z (command git log --oneline -1 ^/dev/null | string match "*-----WIP-----"); or __g2_fatal 'Work In Progress (wip) detected, please run <g unwip> to resume work items first.'
-    return $status
+    if command git log --oneline -1 --pretty=format:'%s' ^/dev/null | string match -i WIPWIPWIPWIP
+        __g2_fatal 'Sorry, a WIP commit must remain local, please run <g unwip> to resume work items.'
+        return 1
+    end
+    return 0
 end
-
 
 #### Now the real thing ------------------------------------------------------------------
 
-
 function __g2_usage
-	echo "G2 Usage:
-	abort - aborts any rebase/merge
-	am <?-f> - amends last commit with staging area
-	br <?-D> <?-M> <?branch> - list or create branches
-	bs - bisect, aka bug finder
-	co <branch> - switches branch (either local/remote)
-	continue - resumes a conflict resolution
-	cp <commit> - cherry-pick
-	ci <?params...> - commit
-	clone <url> - clone a remote repository
-	df/dt <?params...> <file> - compares files
-	fetch - gets changes sitting on the server
-	freeze/unfreeze <?-m comment> <?file> - freeze/unfreeze files
-	gc - garbage collects repository, runs fsck & gc
-	gp - grep
-	gui - launches the GUI
-	ig <file> - adds to gitignore & removes from source control
-	init <folder> - init a repository
-	key <?-gen> - displays/generates your ssh public key
-	mg <?params...> <branch> - merge
-	mt <?params...> - fixes conflicts by opening a visual mergetool
-	mv - move (rename) a file
-	lg - displays branch history log
-	ls <?params...> - list files under source control
-	panic - gets you back on HEAD, cleans all untracked files
-	pull/push <?opts> <remote> <branch> - deals with other branches
-	rb <?params...> <branch> or <upstream> - rebase
-	rm <params...> - remove files
-	rs <params...> - reset branch status
-	rs upstream - resets branch to upstream state
-	rt <?params...> - git remotes management
-	rv <commit> - reverts commits
-	server - starts a local git:// server on current repo
-	setup - configures user, key, editor, tools
-	sh <?-deep> - show commit contents
-	sm <?params...> - submodule management
-	ss <?params> - stash changes
-	st <?params...> - display status
-	sync <?upstream> - syncs working branch: fetch, rebase & push
-	tg - tag
-	track <?upstream_branch> - shows/set remove branch tracking
-	undo <file>|commit|merge - reverts last changes
-	version - prints g2 version
-	wip/unwip - save/restore work in progress to branch"
+    echo "G2 Usage:
+    abort - aborts any rebase/merge
+    am <?-f> - amends last commit with staging area
+    br <?-D> <?-M> <?branch> - list or create branches
+    bs - bisect, aka bug finder
+    co <branch> - switches branch (either local/remote)
+    continue - resumes a conflict resolution
+    cp <commit> - cherry-pick
+    ci <?params...> - commit
+    clone <url> - clone a remote repository
+    df/dt <?params...> <file> - compares files
+    fetch - gets changes sitting on the server
+    freeze/unfreeze <?-m comment> <?file> - freeze/unfreeze files
+    gc - garbage collects repository, runs fsck & gc
+    gp - grep
+    gui - launches the GUI
+    ig <file> - adds to gitignore & removes from source control
+    init <folder> - init a repository
+    key <?-gen> - displays/generates your ssh public key
+    mg <?params...> <branch> - merge
+    mt <?params...> - fixes conflicts by opening a visual mergetool
+    mv - move (rename) a file
+    lg - displays branch history log
+    ls <?params...> - list files under source control
+    panic - gets you back on HEAD, cleans all untracked files
+    pull/push <?opts> <remote> <branch> - deals with other branches
+    rb <?params...> <branch> or <upstream> - rebase
+    rm <params...> - remove files
+    rs <params...> - reset branch status
+    rs upstream - resets branch to upstream state
+    rt <?params...> - git remotes management
+    rv <commit> - reverts commits
+    server - starts a local git:// server on current repo
+    setup - configures user, key, editor, tools
+    sh <?-deep> - show commit contents
+    sm <?params...> - submodule management
+    ss <?params> - stash changes
+    st <?params...> - display status
+    sync <?upstream> - syncs working branch: fetch, rebase & push
+    tg - tag
+    track <?upstream_branch> - shows/set remove branch tracking
+    undo <file>|commit|merge - reverts last changes
+    version - prints g2 version
+    wip/unwip - save/restore work in progress to branch"
 end
 
 function __g2_lg
@@ -317,12 +312,12 @@ end
 
 function __g2_unfreeze
     if test -z "$argv"
-        if test (command git reset -q HEAD > /dev/null) -eq 1
+        if test (command git reset -q HEAD ^ /dev/null) -eq 1
             __g2_fatal 'The first repo commit must be unfrozen file by file. Sorry about that...'
             return 1
         end
     else
-        command git reset -q HEAD -- $argv > /dev/null; or command git rm -q --cached $argv
+        command git reset -q HEAD -- $argv ^ /dev/null; or command git rm -q --cached $argv
     end
     command git status
 end
@@ -366,7 +361,7 @@ function __g2_ig
     if test -z "$argv"
         __g2_info 'Usage: ignore [file]'
     else
-        if test not -e .gitignore
+        if not test -e .gitignore
             touch .gitignore
         end
 
@@ -402,7 +397,7 @@ function __g2_continue
         case merge
             # Count the number of unmerged files
             set count=(command git ls-files --unmerged | wc -l)
-            if [ $count -ne 0 ]
+            if test $count -ne 0
                __g2_fatal ">>>>> Hey! you still have unmerged files, please run <g mt> to resolve conflicts"
                return 1
             else
@@ -420,7 +415,7 @@ function __g2_panic
         set -l g2excludes (command git config --global --get g2.panic.excludes)
         command git reset --hard HEAD; and command git clean -fdx $g2excludes
         set -l branch (command git rev-parse --symbolic-full-name --abbrev-ref HEAD)
-        if [ "$branch" = '(no branch)' ]
+        if test "$branch" = '(no branch)'
             command git checkout master
         end
     end
@@ -482,7 +477,7 @@ function __g2_wip
         __g2_info "Amending previous wip commit..."
         __g2_freeze; and command git commit --amend -C HEAD
     else
-        __g2_freeze -m "-----WIP-----"
+        __g2_freeze -m "WIPWIPWIPWIP"
     end
 end
 
@@ -671,7 +666,6 @@ function __g2_push
         __g2_askYN "Would you like to track $dst"; or __g2_track "$dst"
     else
         if test $forceFlag -eq 0 -a "$dst" = "$remote"
-
             __g2_fatal 'Please use <sync> to synchronize the current branch and <push> to copy to another branch'
         end
     end
@@ -773,23 +767,18 @@ function __g2_sync --argument-names flag
     if test $pullOnly -eq 0 -a $lchg -gt 0
         echo Pushing...
         command git push
-        return $status
     end
-    return 0;
 end
 
 function __g2_rv
-
    command git rev-parse; or return 1
    __g2_iswip; or return 1
    __g2_isdirty; or return 1
 
    command git revert $argv
-
 end
 
 function __g2_mg
-
    command git rev-parse; or return 1
    __g2_iswip; or return 1
 
@@ -798,7 +787,6 @@ function __g2_mg
     end
 
     # merge returns 0 when it merges correctly
-
     if command git merge $argv
         set -l unmerged (command git ls-files --unmerged)
         if test $unmerged
@@ -813,51 +801,51 @@ end
 function __g2_setup
 
     __g2_info "-----------------------------------------------------"
-	__g2_info " G2 setup, press <ENTER> to select the default value"
+    __g2_info " G2 setup, press <ENTER> to select the default value"
     __g2_info "-----------------------------------------------------"
 
-	## USER NAME
-	set -l default (command git config --global --get user.name)
-	set -l nameinput (__g2_askInput "Please input your full name" "$default" false)
+    ## USER NAME
+    set -l default (command git config --global --get user.name)
+    set -l nameinput (__g2_askInput "Please input your full name" "$default" false)
     command git config --global user.name "$nameinput"
 
-	## EMAIL
+    ## EMAIL
     __g2_info "-----------------------------------------------------"
-	set -l default (command git config --global --get user.email)
-	set -l emailinput (__g2_askInput "Please input your email" "$default" true)
+    set -l default (command git config --global --get user.email)
+    set -l emailinput (__g2_askInput "Please input your email" "$default" true)
     command git config --global user.email "$emailinput"
 
-	## EDITOR
+    ## EDITOR
     __g2_info "-----------------------------------------------------"
-	set -l default (command git config --global --get core.editor)
+    set -l default (command git config --global --get core.editor)
     test ! "$default"; and set default vi
-	set -l editor (__g2_askInput "Preferred Editor" "$default" false)
+    set -l editor (__g2_askInput "Preferred Editor" "$default" false)
     command git config --global core.editor "$editor"
 
-	## EXCLUDE FILES
+    ## EXCLUDE FILES
     __g2_info "-----------------------------------------------------"
-	set -l default (command git config --global --get g2.panic.excludes)
+    set -l default (command git config --global --get g2.panic.excludes)
     test ! "$default"; and set default "-e .classpath -e .settings -e *.iml"
-	set -l g2excludes (__g2_askInput 'Pattern of files to keep untouched' "$default" false)
-	command git config --global g2.panic.excludes "$g2excludes"
+    set -l g2excludes (__g2_askInput 'Pattern of files to keep untouched' "$default" false)
+    command git config --global g2.panic.excludes "$g2excludes"
 
-	## DIFFTOOL
+    ## DIFFTOOL
     __g2_info "-----------------------------------------------------"
-	set -l difftools "difftools araxis bc3 diffuse emerge ecmerge gvimdiff kdiff3 kompare meld opendiff p4merge tkdiff vimdiff xxdiff deltawalker"
-	set -l default_dt (command git config diff.tool)
+    set -l difftools "difftools araxis bc3 diffuse emerge ecmerge gvimdiff kdiff3 kompare meld opendiff p4merge tkdiff vimdiff xxdiff deltawalker"
+    set -l default_dt (command git config diff.tool)
     set -l choice (__g2_askChoice 'Please select a difftool' "$difftools" "$default_dt" true)
-	command git config --global diff.tool "$choice"
+    command git config --global diff.tool "$choice"
 
-	## MERGETOOL
+    ## MERGETOOL
     __g2_info "-----------------------------------------------------"
-	set -l mergetools "difftools araxis bc3 diffuse emerge ecmerge gvimdiff kdiff3 kompare meld opendiff p4merge tkdiff vimdiff xxdiff deltawalker"
-	set -l default_mt (command git config merge.tool)
+    set -l mergetools "difftools araxis bc3 diffuse emerge ecmerge gvimdiff kdiff3 kompare meld opendiff p4merge tkdiff vimdiff xxdiff deltawalker"
+    set -l default_mt (command git config merge.tool)
     set -l choice (__g2_askChoice 'Please select a mergetool' "$mergetools" "$default_mt" true)
-	command git config --global merge.tool "$choice"
+    command git config --global merge.tool "$choice"
 
-	## TRUST EXIT CODE
+    ## TRUST EXIT CODE
     __g2_info "-----------------------------------------------------"
-	set -l default (command git config mergetool.$choice.trustExitCode)
+    set -l default (command git config mergetool.$choice.trustExitCode)
     test ! $default; and set default false
     set -l existCode (__g2_askInput "Trust mergetool exit code?" "$default" false)
     command git config --global mergetool.$choice.trustExitCode $existCode
@@ -893,8 +881,8 @@ function __g2_setup
     __g2_info "          https://github.com/Lokaltog/powerline-fonts"
     __g2_info "-----------------------------------------------------"
 
-	## SSH KEY
-	__g2_key -gen
+    ## SSH KEY
+    __g2_key -gen
 
 end
 
@@ -999,11 +987,10 @@ function g
                         __g2_setup
                     case '*'
                         git_is_repo
-                        if [ $status = 1 ]
+                        if test $status -eq 1
                             printf "Not a git repository"
                             return 1
                         end
-
 
                         switch $i
                             case abort
@@ -1099,7 +1086,6 @@ function g
                                 return 1
                         end
                 end
-
                 return $status
             end
         end
@@ -1111,6 +1097,4 @@ function g
     end
 end
 
-set GIT_EXE (which git)
-test ! "$GIT_EXE"; and __g2_fatal "Sorry, git is a required G2 dependency and must be in the PATH"
-set -x GIT_EXE
+
