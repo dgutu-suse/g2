@@ -29,7 +29,7 @@ end
 #         set_color --bold white;
 #         echo -n $prompt
 #         set_color normal
-        if test "$default"
+#        if test "$default"
 #             set_color green
 #             echo -n ' ('$default')'
 #             set_color normal
@@ -38,7 +38,7 @@ end
 #     end
 
 #     set -l REPLY
-    while test ! (echo "$REPLY" | string trim -l -r -c ' ')
+#    while test ! (echo "$REPLY" | string trim -l -r -c ' ')
 #         read -p __g2_askprompt REPLY
 #         if test -z "$REPLY" -a -n "$default"
 #             set REPLY $default
@@ -136,7 +136,6 @@ end
 #### GIT Utility functions  ------------------------------------------------------------------
 
 function __g2_getremote
-
     set -l remote (command git rev-parse --symbolic-full-name --abbrev-ref '@{u}' ^/dev/null)
     if test "$remote" = '@{u}'
         echo ''
@@ -190,7 +189,7 @@ end
 #   if no parameters are provided, figures the upstream branch from the tracking table
 function __g2_isforced --argument-names remote
     set -l remote (__g2_getremote)
-    if test -n "$remote"
+    if test "$remote"
         command git rev-list $remote | string match -q --invert (command git rev-parse $remote ); or return 1
     end
     return 0
@@ -210,7 +209,7 @@ end
 function __g2_iswip
     if command git log --oneline -1 --pretty=format:'%s' ^/dev/null | string match -q -i WIPWIPWIPWIP
         __g2_fatal 'Sorry, a WIP commit must remain local, please run <g unwip> to resume work items.'
-    	return 1
+        return 1
     end
     return 0
 end
