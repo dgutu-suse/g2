@@ -252,7 +252,7 @@ end
 
 function __g2_lg
     if test (count $argv) -eq 0
-        command git log --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit --date=relative
+        command git log --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit --date=relative | less -F
     else
         command git log $argv
     end
@@ -260,7 +260,7 @@ end
 
 function __g2_st
     if test (count $argv) -eq 0
-        command git status
+        command git status --short
     else
         command git status $argv
     end
@@ -312,7 +312,8 @@ function __g2_ci
        return 1
     else
         command git commit $argv
-        return $status
+        # implicit
+       # return $status
     end
 end
 
@@ -836,6 +837,7 @@ function __g2_setup
     command git config --global color.status auto
 
     # FIX A FEW OTHER SETTINGS
+    command git config --global core.pager cat
 
     # For windows, use these default settings
     if test (uname -a | grep -c MINGW) -eq 1
