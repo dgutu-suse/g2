@@ -17,41 +17,28 @@ function __g2_fatal
 end
 
 function __g2_info
-    cprintf "<bg:white>%s</bg>" $argv[1]
+    cprintf "<fg:white>%s</fg>" $argv[1]
 end
 
 #### IO functions ------------------------------------------------------------------
 
-#TODO use fisher get -p prompt -d default -e error_msg
-# function __g2_askInput --argument-names prompt default trimResult
+function __g2_askInput --argument-names prompt default 
 
-#     function __g2_askprompt --no-scope-shadowing
-#         set_color --bold white;
-#         echo -n $prompt
-#         set_color normal
-#        if test "$default"
-#             set_color green
-#             echo -n ' ('$default')'
-#             set_color normal
-#         end
-#         echo -n ': '
-#     end
+    function __g2_askprompt --no-scope-shadowing
+        cprintf "<fg:white>%s</fg> <fg:green>(%s)</fg>: " $prompt $default
+    end
 
-#     set -l REPLY
-#    while test ! (echo "$REPLY" | string trim -l -r -c ' ')
-#         read -p __g2_askprompt REPLY
-#         if test -z "$REPLY" -a -n "$default"
-#             set REPLY $default
-#         end
-#     end
+    set -l REPLY
+    while test ! (echo "$REPLY" | string trim -l -r -c ' ')
+            read -p __g2_askprompt REPLY
+            if test -z "$REPLY" -a -n "$default"
+                set REPLY $default
+            end
+    end
 
-#     if test "$trimResult" = "true"
-#         echo "$REPLY" | string trim -l -r -c ' '
-#     else
-#         echo $REPLY
-#     end
+    echo "$REPLY" | string trim -l -r -c ' '
 
-# end
+end
 
 
 # todo replace with fisher choice
@@ -417,7 +404,6 @@ function __g2_panic
 end
 
 function __g2_gc
-
     command git fetch --all -p
     and command git fsck
     and command git reflog expire --expire=now --all
@@ -426,7 +412,6 @@ function __g2_gc
 end
 
 function __g2_br
-
     if test (count $argv) -eq 0
         command git branch -a
         echo '-----------------'
@@ -538,13 +523,11 @@ function __g2_rs --argument-names arg1
 end
 
 function __g2_rb
-
     if test (__g2_wrkspcState) = 'false'
         if __g2_askYN 'The branch history is about to be rewritten. It is an advanced operation, please confirm'
             return 1
         end
     end
-
     command git rebase $argv
 end
 
@@ -570,6 +553,7 @@ end
 function __g2_co --argument-names branch
 
     # check if it's a hash
+    #todo: replace with string
     if test -z (echo "$branch" | grep -e '^[()a-zA-Z0-9\._\-]*$')
 
         if test (command git branch -a | grep -c "$branch") -gt 0
@@ -801,28 +785,27 @@ function __g2_setup
 
     ## USER NAME
     set -l default (command git config --global --get user.name)
-    set -l nameinput (get -p "Please input your full name" -d "$default" -r "^[a-zA-Z0-9]\+")
+    set -l nameinput (__g2_askInput "Please input your full name" "$default")
     command git config --global user.name "$nameinput"
 
     ## EMAIL
     __g2_info "-----------------------------------------------------"
     set -l default (command git config --global --get user.email)
-    set -l emailinput (get -p "Please input your email" -d "$default" -r "^[a-zA-Z0-9]\+@[a-zA-Z0-9]\+\.[a-z]\{2,\}")
-  
+    set -l emailinput (__g2_askInput "Please input your email" "$default")
     command git config --global user.email "$emailinput"
 
     ## EDITOR
     __g2_info "-----------------------------------------------------"
     set -l default (command git config --global --get core.editor)
     test ! "$default"; and set default vi
-    set -l editor (get -p "Preferred Editor" -d "$default" -r "^[a-zA-Z0-9/\.]\+")
+    set -l editor (__g2_askInput "Preferred editor" "$default")
     command git config --global core.editor "$editor"
 
     ## EXCLUDE FILES
     __g2_info "-----------------------------------------------------"
     set -l default (command git config --global --get g2.panic.excludes)
     test ! "$default"; and set default "-e .classpath -e .settings -e *.iml"
-    set -l g2excludes (get -p 'Pattern of files to keep untouched' -d "$default")
+    set -l g2excludes (__g2_askInput 'Pattern of files to keep untouched' "$default")
     command git config --global g2.panic.excludes "$g2excludes"
 
     ## DIFFTOOL
@@ -843,8 +826,7 @@ function __g2_setup
     __g2_info "-----------------------------------------------------"
     set -l default (command git config mergetool.$choice.trustExitCode)
     test ! $default; and set default false
-    # TODO replace with choice
-    set -l existCode (__g2_askInput "Trust mergetool exit code?" "$default" false)
+    set -l existCode (__g2_askInput "Trust mergetool exit code?" "$default")
     command git config --global mergetool.$choice.trustExitCode $existCode
 
     ## COLOR
@@ -962,7 +944,6 @@ function g
        set -l arg1 $argv[1]
 
         for i in $CMDS
-
             if test "$i" = "$arg1"
 
                 # strip the first argument, if any
@@ -1090,8 +1071,5 @@ function g
         __g2_usage
         __g2_fatal "Invalid g2 command!"
         return 1
-
     end
 end
-
-
