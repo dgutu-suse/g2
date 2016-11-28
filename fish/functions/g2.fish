@@ -136,11 +136,12 @@ end
 function __g2_wrkspcState
 
     set -l git_dir (command git rev-parse --git-dir ^/dev/null)
-    if test -d "$git_dir/rebase-merge" -o -d "$git_dir/rebase-apply"
+
+    if test -e "$git_dir/rebase-merge" -o -e "$git_dir/rebase-apply"
         echo 'rebase'
         return 0
     end
-    if test -d "$git_dir/MERGE_HEAD"
+    if test -e $git_dir/MERGE_HEAD
         echo 'merge'
         return 0
     end
@@ -387,6 +388,10 @@ function __g2_continue
                command git commit
                return $status
             end
+
+        case '*'
+            __g2_info 'There are no pending merge or rebase. Enjoy the day.'
+            return 0
     end
 end
 
