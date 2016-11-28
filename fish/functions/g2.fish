@@ -308,6 +308,11 @@ end
 function __g2_ci
     __g2_iswip; or return 1
 
+    if test (__g2_wrkspcState) != 'false'
+        __g2_fatal 'Please use <g continue> to close defect resolution step.'
+        return 1
+    end
+
     if command git diff --cached --no-ext-diff --quiet --exit-code
          __g2_fatal 'No changes to amend, please use <g freeze> to stage your modification, then try amending again.'
        return 1
@@ -336,12 +341,16 @@ function __g2_am
 end
 
 function __g2_cp
+    if test (__g2_wrkspcState) != 'false'
+        __g2_fatal 'Please use <g continue> to close defect resolution step.'
+        return 1
+    end
+
     __g2_iswip; or return 1
     command git cherry-pick $argv
 end
 
 function __g2_ig
-
     if test -z "$argv"
         __g2_info 'Usage: ignore [file]'
     else
@@ -558,6 +567,11 @@ end
 
 function __g2_co --argument-names branch
 
+    if test (__g2_wrkspcState) != 'false'
+        __g2_fatal 'Please use <g abort> to revert defect resolution'
+        return 1
+    end
+
     # check if it's a hash
     #todo: replace with string
     if test -z (echo "$branch" | grep -e '^[()a-zA-Z0-9\._\-]*$')
@@ -586,6 +600,11 @@ end
 
 function __g2_undo --argument-names action
 
+    if test (__g2_wrkspcState) != 'false'
+        __g2_fatal 'Please use <g abort> to revert defect resolution'
+        return 1
+    end
+
     if test (count $argv) -lt 1
         __g2_fatal 'Usage : g undo <file|commit|merge> <?path>'
         return 1
@@ -612,6 +631,11 @@ function __g2_undo --argument-names action
 end
 
 function __g2_push
+
+    if test (__g2_wrkspcState) != 'false'
+        __g2_fatal 'Please use <g continue> to close defect resolution step'
+        return 1
+    end
 
     __g2_iswip; or return 1
 
@@ -666,6 +690,11 @@ end
 # g2 pull uses the --no-ff flag
 function __g2_pull
 
+    if test (__g2_wrkspcState) != 'false'
+        __g2_fatal 'Please use <g continue> to close defect resolution step.'
+        return 1
+    end
+
     __g2_iswip; or return 1
 
     set -l idx (count $argv)
@@ -699,6 +728,11 @@ end
 
 # Performs a fetch, rebase, push with a bunch of validations
 function __g2_sync --argument-names flag
+
+    if test (__g2_wrkspcState) != 'false'
+        __g2_fatal 'Please use <g continue> to close defect resolution step.'
+        return 1
+    end
 
     __g2_iswip; or return 1
     __g2_isdirty; or return 1
@@ -756,6 +790,12 @@ function __g2_sync --argument-names flag
 end
 
 function __g2_rv
+
+    if test (__g2_wrkspcState) != 'false'
+        __g2_fatal 'Please use <g continue> to close defect resolution step'
+        return 1
+    end
+
    command git rev-parse; or return 1
    __g2_iswip; or return 1
    __g2_isdirty; or return 1
@@ -764,6 +804,12 @@ function __g2_rv
 end
 
 function __g2_mg
+
+    if test (__g2_wrkspcState) != 'false'
+        __g2_fatal 'Please use <g continue> to close defect resolution step'
+        return 1
+    end
+
    command git rev-parse; or return 1
    __g2_iswip; or return 1
 
