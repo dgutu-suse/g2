@@ -38,18 +38,19 @@ This project is an attempt to make the git command line a friendly place: it eas
 
 * **g2** is a layer on top of git, If you are doing a manual install, a recent version of git must be pre-installed.
 * Please backup your favorite ~/.gitconfig as g2 with recreate it from scratch.
-* G2 runs **bash** and **fishshell**.
+* G2 runs on Windows and Unix. it is written in **bash** and **fishshell**. Yet at this point, only the fishshell version is maintained.
 
 ###MacOS/Linux
 
-Only the fishshell version is maintained.
 With [fishshell](https://fishshell.com/) and [fisherman](http://fisherman.sh/) previously installed, run
 
     fisher g2
 
+to install g2. 
+
 #How to use
 
-The project overrides the `g` and `git` commands. Taken without parameters it displays the following output.
+The project overrides the `g` command. Taken without parameters it displays the following output.
 
 ```
 $ g
